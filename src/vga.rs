@@ -103,7 +103,22 @@ impl Screen {
     }
 
     pub fn scroll_down(&mut self) {
-        // TODO
+		// move all rows up
+		for row in 1..HEIGHT {
+			for col in 0..WIDTH {
+				self.buffer[row-1][col] = self.buffer[row][col];
+			}
+		}
+
+		// clear bottom row
+		let blank = self.screen_char(b' ');
+		for col in 0..WIDTH {
+			self.buffer[HEIGHT-1][col] = blank;
+		}
+
+		if self.y > 0 {
+			self.y -= 1;
+		}
     }
 
     pub fn new_line(&mut self) {
