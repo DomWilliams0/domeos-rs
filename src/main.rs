@@ -1,7 +1,7 @@
 #![no_std]
 #![feature(lang_items)]
 #![feature(const_fn)]
-#![no_main]
+#![cfg_attr(not(test), no_main)]
 #![allow(dead_code, unused_macros)]
 
 extern crate volatile;
@@ -13,6 +13,7 @@ extern crate lazy_static;
 #[macro_use]
 mod vga;
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("one\ntwo\nthree = {}, {}, {}", 1, 2, 22.6/7.0);
@@ -23,6 +24,7 @@ pub extern "C" fn _start() -> ! {
     loop {}
 }
 
+#[cfg(not(test))]
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern "C" fn rust_begin_panic(
