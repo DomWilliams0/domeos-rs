@@ -10,3 +10,7 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
+
+[package.metadata.bootimage]
+default-target = "spec.json"
+output = "target/kernel.bin"
