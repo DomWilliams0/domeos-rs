@@ -4,6 +4,8 @@
 #![no_main]
 #![allow(dead_code)]
 
+extern crate volatile;
+
 mod vga;
 
 #[no_mangle]

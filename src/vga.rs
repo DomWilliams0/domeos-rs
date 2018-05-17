@@ -1,3 +1,5 @@
+use volatile::Volatile;
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Colour {
@@ -41,7 +43,7 @@ impl ScreenChar {
 
 const WIDTH: usize = 80;
 const HEIGHT: usize = 25;
-type VGABuffer = [[ScreenChar; WIDTH]; HEIGHT];
+type VGABuffer = [[Volatile<ScreenChar>; WIDTH]; HEIGHT];
 
 pub struct Screen {
     buffer: &'static mut VGABuffer,
@@ -103,22 +105,23 @@ impl Screen {
     }
 
     pub fn scroll_down(&mut self) {
-		// move all rows up
-		for row in 1..HEIGHT {
-			for col in 0..WIDTH {
-				self.buffer[row-1][col] = self.buffer[row][col];
-			}
-		}
+        // move all rows up
+        for row in 1..HEIGHT {
+            for col in 0..WIDTH {
+                let v = self.buffer[row][col].read();
+                self.buffer[row - 1][col].write(v);
+            }
+        }
 
-		// clear bottom row
-		let blank = self.screen_char(b' ');
-		for col in 0..WIDTH {
-			self.buffer[HEIGHT-1][col] = blank;
-		}
+        // clear bottom row
+        let blank = self.screen_char(b' ');
+        for col in 0..WIDTH {
+            self.buffer[HEIGHT - 1][col].write(blank);
+        }
 
-		if self.y > 0 {
-			self.y -= 1;
-		}
+        if self.y > 0 {
+            self.y -= 1;
+        }
     }
 
     pub fn new_line(&mut self) {
@@ -141,7 +144,7 @@ impl Screen {
         // print char
         if !new_line {
             let c = self.screen_char(b);
-            self.buffer[self.y][self.x] = c;
+            self.buffer[self.y][self.x].write(c);
             self.x += 1;
         }
 
