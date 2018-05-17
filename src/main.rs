@@ -2,17 +2,24 @@
 #![feature(lang_items)]
 #![feature(const_fn)]
 #![no_main]
-#![allow(dead_code)]
+#![allow(dead_code, unused_macros)]
 
 extern crate volatile;
+extern crate spin;
 
+#[macro_use]
+extern crate lazy_static;
+
+#[macro_use]
 mod vga;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let mut s = vga::Screen::default();
-    s.write_string("one\ntwo\nthree\n");
-    s.write_string("this is a very long message that should wrap at the edges if it is long enough, which it is");
+    println!("one\ntwo\nthree = {}, {}, {}", 1, 2, 22.6/7.0);
+    println!("this is a very long message that should wrap at the edges if it is long enough, which it is");
+
+    vga::get().set_colours(vga::Colour::Pink, vga::Colour::White);
+    println!("bye bye");
     loop {}
 }
 

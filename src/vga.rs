@@ -1,3 +1,5 @@
+use core::fmt::{self, Write};
+use spin;
 use volatile::Volatile;
 
 #[repr(u8)]
@@ -53,14 +55,8 @@ pub struct Screen {
     y: usize,
 }
 
-impl Default for Screen {
-    fn default() -> Self {
-        Self::with_colours(Colour::White, Colour::Black)
-    }
-}
-
 impl Screen {
-    pub fn with_colours(fg: Colour, bg: Colour) -> Self {
+    fn with_colours(fg: Colour, bg: Colour) -> Self {
         let mut s = Self {
             buffer: unsafe { &mut *(0xb8000 as *mut VGABuffer) },
             foreground: fg,
@@ -159,4 +155,34 @@ impl Screen {
             self.write_byte(b);
         }
     }
+}
+
+macro_rules! println {
+    () => (print!("\n"));
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga::print(format_args!($($arg)*)));
+}
+
+pub fn print(args: fmt::Arguments) {
+    get().write_fmt(args).unwrap();
+}
+
+impl fmt::Write for Screen {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_string(s);
+        Ok(())
+    }
+}
+
+lazy_static! {
+    static ref INSTANCE: spin::Mutex<Screen> =
+        spin::Mutex::new(Screen::with_colours(Colour::Green, Colour::Black));
+}
+
+pub fn get<'a>() -> spin::MutexGuard<'a, Screen> {
+    INSTANCE.lock()
 }
