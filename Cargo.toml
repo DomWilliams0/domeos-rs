@@ -1,0 +1,12 @@
+[package]
+name = "domeos"
+version = "0.1.0"
+authors = ["Dom Williams <me@domwillia.ms>"]
+
+[dependencies]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
