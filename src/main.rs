@@ -1,16 +1,16 @@
 #![no_std]
 #![feature(lang_items)]
+#![feature(const_fn)]
 #![no_main]
+#![allow(dead_code)]
+
+mod vga;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let vga = 0xb8000 as *const u8 as *mut u8;
-    let pos = 30;
-    unsafe {
-        *vga.offset(pos) = 'X' as u8;
-        *vga.offset(pos + 1) = 0xa;
-    }
-
+    let mut s = vga::Screen::default();
+    s.write_string("one\ntwo\nthree\n");
+    s.write_string("this is a very long message that should wrap at the edges if it is long enough, which it is");
     loop {}
 }
 
