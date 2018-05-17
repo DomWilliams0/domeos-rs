@@ -186,3 +186,7 @@ lazy_static! {
 pub fn get<'a>() -> spin::MutexGuard<'a, Screen> {
     INSTANCE.lock()
 }
+
+pub fn set_error_colours() {
+    get().set_colours(Colour::White, Colour::Red);
+}
