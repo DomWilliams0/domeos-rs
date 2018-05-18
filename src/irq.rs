@@ -3,7 +3,7 @@ use spin::Mutex;
 use vga;
 
 use x86_64::instructions as instr;
-use x86_64::structures::idt::{Idt, ExceptionStackFrame, PageFaultErrorCode};
+use x86_64::structures::idt::{ExceptionStackFrame, Idt, PageFaultErrorCode};
 
 type IOPort = Mutex<Port<u8>>;
 lazy_static! {
@@ -32,8 +32,8 @@ lazy_static! {
         idt.virtualization.set_handler_fn(isr_panic_ve);
         idt.security_exception.set_handler_fn(isr_panic_sx);
 
-        idt[32].set_handler_fn(irq_clock);
-        idt[33].set_handler_fn(irq_kb);
+        idt[32+0].set_handler_fn(handlers::clock);
+        idt[32+1].set_handler_fn(handlers::kb);
 
         idt
     };
@@ -70,25 +70,45 @@ pub fn register() {
     IDT.load();
 }
 
-fn irq_clear() {
+// fn as_unit<T>(_: &mut T) -> () {}
+
+macro_rules! irq_handler {
+    ($no:expr, $name:ident, $body:block) => {
+        // somehow need to generate a unique name
+        // lazy_static! {
+        //     static ref $name: () = as_unit(IDT[32+$no].set_handler_fn($name));
+        // }
+
+        pub extern "x86-interrupt" fn $name(_: &mut ExceptionStackFrame) {
+            $body
+            irq_clear($no >= 8);
+        }
+    };
+}
+
+fn irq_clear(slave: bool) {
     let mut master_cmd = PIC_MASTER_COMMAND.lock();
     let mut slave_cmd = PIC_SLAVE_COMMAND.lock();
 
-    slave_cmd.write(0x20);
+    if slave {
+        slave_cmd.write(0x20);
+    }
     master_cmd.write(0x20);
 }
 
-extern "x86-interrupt" fn irq_clock(_: &mut ExceptionStackFrame) {
-    vga::get().set_colours(vga::Colour::Black, vga::Colour::White);
-    print!("clock ");
-    irq_clear();
-}
+mod handlers {
+    use super::*;
 
-extern "x86-interrupt" fn irq_kb(_: &mut ExceptionStackFrame) {
-    let scancode = KEYBOARD.lock().read();
-    vga::get().set_colours(vga::Colour::White, vga::Colour::Black);
-    println!("scancode: {}", scancode);
-    irq_clear();
+    irq_handler!(0, clock, {
+        vga::get().set_colours(vga::Colour::Black, vga::Colour::White);
+        print!("clock ");
+    });
+
+    irq_handler!(1, kb, {
+        let scancode = KEYBOARD.lock().read();
+        vga::get().set_colours(vga::Colour::White, vga::Colour::Black);
+        println!("scancode: {}", scancode);
+    });
 }
 
 /// Disable interrupts and loop forever
