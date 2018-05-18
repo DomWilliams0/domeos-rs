@@ -39,5 +39,5 @@ pub extern "C" fn rust_begin_panic(
 ) -> ! {
     vga::set_error_colours();
     println!("\nRUST PANIC at {}:{}:{} - {}", file, line, column, msg);
-    loop {}
+    irq::panic();
 }

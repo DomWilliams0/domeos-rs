@@ -2,6 +2,7 @@ use cpuio::Port;
 use spin::Mutex;
 use vga;
 
+use core::ops::*;
 use x86_64::instructions as instr;
 use x86_64::structures::idt::{ExceptionStackFrame, Idt, PageFaultErrorCode};
 
@@ -34,6 +35,7 @@ lazy_static! {
 
         idt[32+0].set_handler_fn(handlers::clock);
         idt[32+1].set_handler_fn(handlers::kb);
+        idt[32+12].set_handler_fn(handlers::mouse);
 
         idt
     };
@@ -43,6 +45,7 @@ lazy_static! {
     static ref PIC_SLAVE_COMMAND: IOPort = unsafe{Mutex::new(Port::new(0xA0))};
     static ref PIC_SLAVE_DATA: IOPort = unsafe{Mutex::new(Port::new(0xA1))};
     static ref KEYBOARD: IOPort = unsafe{Mutex::new(Port::new(0x60))};
+    static ref PS2: IOPort = unsafe{Mutex::new(Port::new(0x64))};
 }
 
 fn enable_pics_and_remap_irqs() {
@@ -64,10 +67,80 @@ fn enable_pics_and_remap_irqs() {
     slave_data.write(0x0);
 }
 
+fn write_ps2(b: u8) {
+    let mut ps2 = PS2.lock();
+    // wait for bit 1 to be CLEAR
+    while ps2.read().bitand(2) == 0x1 {}
+
+    println!("starting writing to ps2");
+    ps2.write(b);
+    println!("done writing to ps2");
+}
+
+fn write_kb(b: u8) {
+    // wait for bit 1
+    while PS2.lock().read() & 2 == 0x1 {}
+    KEYBOARD.lock().write(b);
+}
+
+fn read_ps2() -> u8 {
+    PS2.lock().read()
+}
+
+/// bit 5 = for mouse
+fn read_kb() -> u8 {
+    // wait for bit 0
+    while PS2.lock().read() & 1 != 0x1 {}
+    KEYBOARD.lock().read()
+}
+
+fn start_ps2() {
+    // All output to port 0x60 or 0x64 must be preceded by waiting for bit 1 (value=2) of port 0x64 to become clear.
+    // Similarly, bytes cannot be read from port 0x60 until bit 0 (value=1) of port 0x64 is set.
+
+    // mouse
+    // enables aux input
+    // does no harm
+
+    write_ps2(0xa8);
+    read_kb();
+
+    write_ps2(0x20);
+    let status = read_ps2();
+    // set 1 and clear 5
+    let status = status.bitor(1 << 1).bitand(0xff - (1 << 5));
+    write_ps2(0x60);
+    write_kb(status);
+
+    let ack = read_kb();
+    println!("status set ack = {:x}", ack);
+
+    // enable
+    write_kb(0xf4);
+    let ack = read_kb();
+    println!("enable ack = {:x}", ack);
+}
+
+/// true = mouse, false = kb, None = neither
+/// TODO this is horrendous
+fn ps2_ready() -> Option<bool> {
+    let c = read_ps2();
+    let data_present = c.bitand(0x1) == 1;
+    let is_mouse = c.bitand(0x20) == 1;
+
+    println!("{} {}", data_present, is_mouse);
+
+    if data_present {
+        Some(is_mouse)
+    } else {
+        None
+    }
+}
+
 pub fn register() {
     enable_pics_and_remap_irqs();
-
     IDT.load();
+    start_ps2();
 }
 
 // fn as_unit<T>(_: &mut T) -> () {}
@@ -81,7 +154,7 @@ macro_rules! irq_handler {
 
         pub extern "x86-interrupt" fn $name(_: &mut ExceptionStackFrame) {
             $body
-            irq_clear($no >= 8);
+                irq_clear($no >= 8);
         }
     };
 }
@@ -100,14 +173,25 @@ mod handlers {
     use super::*;
 
     irq_handler!(0, clock, {
-        vga::get().set_colours(vga::Colour::Black, vga::Colour::White);
-        print!("clock ");
+        // vga::get().set_colours(vga::Colour::Black, vga::Colour::White);
+        //print!("clock ");
     });
 
     irq_handler!(1, kb, {
-        let scancode = KEYBOARD.lock().read();
-        vga::get().set_colours(vga::Colour::White, vga::Colour::Black);
-        println!("scancode: {}", scancode);
+        println!("kb fired");
+        //if !ps2_ready().unwrap_or(false) {
+        //    let scancode = KEYBOARD.lock().read();
+        //    vga::get().set_colours(vga::Colour::White, vga::Colour::Black);
+        //    println!("scancode: {}", scancode);
+        //}
+    });
+
+    irq_handler!(12, mouse, {
+        println!("mouse fired");
+        if ps2_ready().unwrap_or(false) {
+            let data = KEYBOARD.lock().read();
+            print!("mouse {}! ", data);
+        }
     });
 }
 
