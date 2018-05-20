@@ -2,7 +2,7 @@ KERNEL          = target/kernel.bin
 TARGET          = target/domeos.iso
 SRCS            = $(shell find src -name "*.rs") spec.json
 
-RUN_CMD         = qemu-system-x86_64 -d cpu_reset -cdrom $(TARGET)
+RUN_CMD         = qemu-system-x86_64 -d cpu_reset -D qemu-logfile -monitor stdio -cdrom $(TARGET)
 
 ifeq ($(CURSES),1)
 	RUN_CMD    := $(RUN_CMD) -nographic -curses
