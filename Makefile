@@ -14,9 +14,9 @@ LD              = x86_64-elf-ld
 CFLAGS          = -ffreestanding -lgcc
 LDFLAGS         = -n -Tlinker.ld -g -nostdlib
 
-NASM_FLAGS      = -felf64
+NASM_FLAGS      = -felf64 -Wall
 
-BOOTLOADER_SRC  = src/boot/multiboot.s src/boot/boot.s
+BOOTLOADER_SRC  = $(shell find src/boot/*.s)
 BOOTLOADER      = $(patsubst %.s, target/%.o, $(notdir $(BOOTLOADER_SRC)))
 
 ISO_DIR         = target/isofiles

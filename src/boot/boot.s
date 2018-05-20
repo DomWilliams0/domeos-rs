@@ -1,4 +1,5 @@
 global start
+extern long_mode_start
 
 section .bss
 align   4096
@@ -17,6 +18,16 @@ stack_bottom:
 stack_top:
 
 
+section .rodata
+gdt64:
+dq		0										; first null entry
+.cs: equ $ - gdt64
+dq		(1<<43) | (1<<44) | (1<<47) | (1<<53)	; code, data not needed
+												; flags set: descriptor type, present, exec, 64 bit
+.ptr:
+dw		$ - gdt64 - 1							; length of gdt
+dq		gdt64
+
 section .text
 bits	 32
 
@@ -30,15 +41,11 @@ mov     esp, stack_top
 call	init_page_tables
 call	enable_paging
 
-; run kernel
-;extern  kernel_main
-;push    ebx
-;call    kernel_main
-mov		dword [0xb8000], 0x2f4b2f4a
+; load 64 bit gdt
+lgdt	[gdt64.ptr]
 
-; hang on exit
-cli
-jmp     $
+; jump into 64 bit mode!
+jmp		gdt64.cs:long_mode_start
 
 init_page_tables:
 
