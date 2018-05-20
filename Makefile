@@ -1,4 +1,5 @@
-KERNEL          = target/kernel.bin
+KERNEL          = target/spec/debug/libdomeos.a
+OS              = target/domeos.bin
 TARGET          = target/domeos.iso
 SRCS            = $(shell find src -name "*.rs") spec.json
 
@@ -38,20 +39,23 @@ debug: build
 
 .PHONY: clean
 clean:
-	rm -rf $(BOOTLOADER) $(ISO_DIR) $(TARGET) $(KERNEL)
+	rm -rf $(BOOTLOADER) $(ISO_DIR) $(TARGET) $(KERNEL) $(OS)
 	cargo clean -p domeos
 
-$(KERNEL): $(SRCS) $(BOOTLOADER)
-	$(LD) $(LDFLAGS) -o $@ $(BOOTLOADER) # fix brackets
+$(OS): $(BOOTLOADER) $(KERNEL)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+$(KERNEL): $(SRCS)
+	RUST_TARGET_PATH=$(PWD) xargo build --target spec
 
 target/%.o: src/boot/%.s
 	nasm $(NASM_FLAGS) $< -o $@
 
 $(GRUB_CFG):
 	mkdir -p $(GRUB_DIR)
-	echo -e "set timeout=0\nset default=0\nmenuentry \"domeos\" {\nmultiboot2 /boot/$(notdir $(KERNEL))\nboot\n}" > $@
+	echo -e "set timeout=0\nset default=0\nmenuentry \"domeos\" {\nmultiboot2 /boot/$(notdir $(OS))\nboot\n}" > $@
 
 
-$(TARGET): $(KERNEL) $(GRUB_CFG)
-	cp $(KERNEL) $(GRUB_DIR)/../
+$(TARGET): $(OS) $(GRUB_CFG)
+	cp $(OS) $(GRUB_DIR)/../
 	grub-mkrescue -o $@ $(ISO_DIR)

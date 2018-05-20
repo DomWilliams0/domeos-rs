@@ -3,6 +3,9 @@ name = "domeos"
 version = "0.1.0"
 authors = ["Dom Williams <me@domwillia.ms>"]
 
+[lib]
+crate-type = ["staticlib"]
+
 [dependencies]
 volatile = "0.2.4"
 spin = "0.4"
@@ -18,7 +21,3 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
-
-[package.metadata.bootimage]
-default-target = "spec.json"
-output = "target/kernel.bin"

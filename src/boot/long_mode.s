@@ -1,13 +1,13 @@
 global long_mode_start
+extern  _start
 
 section .text
 bits 64
 long_mode_start:
 
 ; run kernel
-;extern  kernel_main
 ;push    ebx
-;call    kernel_main
+call    _start
 
 ; print message instead
 mov		rax, 0x2f592f412f4b2f4f
