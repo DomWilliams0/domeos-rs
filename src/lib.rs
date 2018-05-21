@@ -1,9 +1,11 @@
 #![no_std]
 #![feature(lang_items)]
 #![feature(const_fn)]
+#![feature(asm)]
 #![feature(abi_x86_interrupt)]
 #![allow(dead_code, unused_macros)]
 
+extern crate bit_field;
 extern crate cpuio;
 extern crate spin;
 extern crate volatile;
@@ -14,13 +16,13 @@ extern crate lazy_static;
 
 #[macro_use]
 mod vga;
+mod idt;
 mod irq;
 
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    // irq::register();
-    // TODO fix irqs
+    irq::register();
 
     println!("one\ntwo\nthree = {}, {}, {}", 1, 2, 22.6 / 7.0);
     println!("this is a very long message that should wrap at the edges if it is long enough, which it is");

@@ -1,9 +1,10 @@
 use cpuio::Port;
 use spin::Mutex;
+
+use idt::*;
 use vga;
 
 use x86_64::instructions as instr;
-use x86_64::structures::idt::{ExceptionStackFrame, Idt, PageFaultErrorCode};
 
 type IOPort = Mutex<Port<u8>>;
 lazy_static! {
@@ -11,29 +12,29 @@ lazy_static! {
         let mut idt = Idt::new();
 
         // default handlers
-        idt.divide_by_zero.set_handler_fn(isr_panic_de);
-        idt.debug.set_handler_fn(isr_panic_db);
-        idt.non_maskable_interrupt.set_handler_fn(isr_panic_nmi);
-        idt.breakpoint.set_handler_fn(isr_panic_bp);
-        idt.overflow.set_handler_fn(isr_panic_of);
-        idt.bound_range_exceeded.set_handler_fn(isr_panic_br);
-        idt.invalid_opcode.set_handler_fn(isr_panic_ud);
-        idt.device_not_available.set_handler_fn(isr_panic_nm);
-        idt.double_fault.set_handler_fn(isr_panic_df);
-        idt.invalid_tss.set_handler_fn(isr_panic_ts);
-        idt.segment_not_present.set_handler_fn(isr_panic_np);
-        idt.stack_segment_fault.set_handler_fn(isr_panic_ss);
-        idt.general_protection_fault.set_handler_fn(isr_panic_gp);
-        idt.page_fault.set_handler_fn(isr_panic_pf);
-        idt.x87_floating_point.set_handler_fn(isr_panic_mf);
-        idt.alignment_check.set_handler_fn(isr_panic_ac);
-        idt.machine_check.set_handler_fn(isr_panic_mc);
-        idt.simd_floating_point.set_handler_fn(isr_panic_xf);
-        idt.virtualization.set_handler_fn(isr_panic_ve);
-        idt.security_exception.set_handler_fn(isr_panic_sx);
+        // idt.divide_by_zero.set_handler_fn(isr_panic_de);
+        // idt.debug.set_handler_fn(isr_panic_db);
+        // idt.non_maskable_interrupt.set_handler_fn(isr_panic_nmi);
+        // idt.breakpoint.set_handler_fn(isr_panic_bp);
+        // idt.overflow.set_handler_fn(isr_panic_of);
+        // idt.bound_range_exceeded.set_handler_fn(isr_panic_br);
+        // idt.invalid_opcode.set_handler_fn(isr_panic_ud);
+        // idt.device_not_available.set_handler_fn(isr_panic_nm);
+        // idt.double_fault.set_handler_fn(isr_panic_df);
+        // idt.invalid_tss.set_handler_fn(isr_panic_ts);
+        // idt.segment_not_present.set_handler_fn(isr_panic_np);
+        // idt.stack_segment_fault.set_handler_fn(isr_panic_ss);
+        // idt.general_protection_fault.set_handler_fn(isr_panic_gp);
+        // idt.page_fault.set_handler_fn(isr_panic_pf);
+        // idt.x87_floating_point.set_handler_fn(isr_panic_mf);
+        // idt.alignment_check.set_handler_fn(isr_panic_ac);
+        // idt.machine_check.set_handler_fn(isr_panic_mc);
+        // idt.simd_floating_point.set_handler_fn(isr_panic_xf);
+        // idt.virtualization.set_handler_fn(isr_panic_ve);
+        // idt.security_exception.set_handler_fn(isr_panic_sx);
 
-        idt[32+0].set_handler_fn(handlers::clock);
-        idt[32+1].set_handler_fn(handlers::kb);
+        // idt[32+0].set_handler_fn(handlers::clock);
+        // idt[32+1].set_handler_fn(handlers::kb);
 
         idt
     };
@@ -67,7 +68,7 @@ fn enable_pics_and_remap_irqs() {
 pub fn register() {
     enable_pics_and_remap_irqs();
 
-    IDT.load();
+    IDT.install();
 }
 
 // fn as_unit<T>(_: &mut T) -> () {}
@@ -79,10 +80,10 @@ macro_rules! irq_handler {
         //     static ref $name: () = as_unit(IDT[32+$no].set_handler_fn($name));
         // }
 
-        pub extern "x86-interrupt" fn $name(_: &mut ExceptionStackFrame) {
-            $body
-            irq_clear($no >= 8);
-        }
+        //pub extern "x86-interrupt" fn $name(_: &mut ExceptionStackFrame) {
+        //    $body
+        //    irq_clear($no >= 8);
+        //}
     };
 }
 
@@ -119,6 +120,7 @@ pub fn panic() -> ! {
     loop {}
 }
 
+/*
 fn isr_panic(_sf: &mut ExceptionStackFrame, irq: &'static str, error_code: Option<u64>) {
     vga::set_error_colours();
     print!("\nException: unhandled interrupt \"{}\"", irq);
@@ -190,3 +192,4 @@ extern "x86-interrupt" fn isr_panic_ve(sf: &mut ExceptionStackFrame) {
 extern "x86-interrupt" fn isr_panic_sx(sf: &mut ExceptionStackFrame, ec: u64) {
     isr_panic(sf, "security exception", Some(ec));
 }
+*/
